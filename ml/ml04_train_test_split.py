@@ -136,8 +136,8 @@ def main():
     holdout.groupBy("label").count().show()
 
     # Check viral % in both sets — should be roughly similar
-    train_viral_pct   = train.filter(F.col("label") == 1).count() / train_count * 100
-    holdout_viral_pct = holdout.filter(F.col("label") == 1).count() / holdout_count * 100
+    train_viral_pct   = (train.filter(F.col("label") == 1).count() / train_count * 100) if train_count > 0 else 0
+    holdout_viral_pct = (holdout.filter(F.col("label") == 1).count() / holdout_count * 100) if holdout_count > 0 else 0
 
     print(f"  Train viral %  : {train_viral_pct:.4f}%")
     print(f"  Holdout viral %: {holdout_viral_pct:.4f}%")
