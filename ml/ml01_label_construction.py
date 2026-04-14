@@ -23,9 +23,9 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
 from pyspark.sql.utils import AnalysisException
 
-# ─────────────────────────────────────────────
+#  ------------------------------------------------------------------------------------------------
 # CONFIG — update paths if needed
-# ─────────────────────────────────────────────
+#  ------------------------------------------------------------------------------------------------
 EVENTS_PARQUET_PATH = "hdfs://namenode:9000/github/events/parquet/"
 OUTPUT_PATH         = "hdfs://namenode:9000/github/ml/labels/"
 STAR_THRESHOLD      = 1000
