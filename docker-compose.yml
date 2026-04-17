@@ -1,0 +1,403 @@
+# GitHub Developer Ecosystem Analytics — Docker Compose
+# Author: Hariharan L (hl5865)
+# INFRA-01
+#
+# Starts all services needed for the platform:
+#   - HDFS (namenode + 2 datanodes)         → stores Parquet files
+#   - YARN (resourcemanager + nodemanager)  → runs Spark jobs
+#   - Spark (master + worker)               → batch + streaming processing
+#   - Zookeeper + Kafka                     → streaming pipeline
+#   - Airflow (webserver + scheduler + db)  → job orchestration
+#
+# NOTE: Grafana data store (InfluxDB/Postgres) slot is left open.
+# Vikram confirms the choice by Day 2 — add it to the grafana section below.
+#
+# Usage:
+#   docker compose up -d          # start all services in background
+#   docker compose ps             # check status
+#   docker compose logs -f spark-master   # tail logs for a specific service
+#   docker compose down           # stop everything
+#   docker compose down -v        # stop and delete all data volumes
+
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# Shared environment — Hadoop config injected into every service that needs it
+# ---------------------------------------------------------------------------
+x-hadoop-env: &hadoop-env
+  CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+  CORE_CONF_hadoop_http_staticuser_user: root
+  HDFS_CONF_dfs_replication: 1              # 1 replica is fine for local dev
+  HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+  YARN_CONF_yarn_resourcemanager_hostname: resourcemanager
+  YARN_CONF_yarn_nodemanager_aux___services: mapreduce_shuffle
+
+# ---------------------------------------------------------------------------
+# Networks — all services on one internal network so they find each other
+# ---------------------------------------------------------------------------
+networks:
+  bigdata-net:
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Volumes — named volumes so data persists when containers restart
+# ---------------------------------------------------------------------------
+volumes:
+  namenode-data:
+  datanode1-data:
+  datanode2-data:
+  airflow-db-data:
+
+# ===========================================================================
+# SERVICES
+# ===========================================================================
+services:
+
+  # -------------------------------------------------------------------------
+  # HDFS — NameNode
+  # The NameNode is the "directory" of HDFS. It tracks where every file
+  # block is stored across the DataNodes. It does NOT store the actual data.
+  # Web UI: http://localhost:9870
+  # -------------------------------------------------------------------------
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    networks:
+      - bigdata-net
+    ports:
+      - "9870:9870"   # HDFS Web UI
+      - "9000:9000"   # HDFS RPC port (Spark connects here)
+    volumes:
+      - namenode-data:/hadoop/dfs/name
+    environment:
+      <<: *hadoop-env
+      CLUSTER_NAME: github-analytics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # HDFS — DataNode 1
+  # DataNodes store the actual file blocks. We run 2 of them to simulate
+  # a real cluster. Files are split into 128MB blocks across DataNodes.
+  # -------------------------------------------------------------------------
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode1
+    hostname: datanode1
+    networks:
+      - bigdata-net
+    volumes:
+      - datanode1-data:/hadoop/dfs/data
+    environment:
+      <<: *hadoop-env
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  # -------------------------------------------------------------------------
+  # HDFS — DataNode 2
+  # -------------------------------------------------------------------------
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    hostname: datanode2
+    networks:
+      - bigdata-net
+    volumes:
+      - datanode2-data:/hadoop/dfs/data
+    environment:
+      <<: *hadoop-env
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  # -------------------------------------------------------------------------
+  # YARN — ResourceManager
+  # YARN is Hadoop's cluster resource manager. It allocates CPU + memory
+  # to Spark jobs. Think of it as the "job scheduler" for the cluster.
+  # Web UI: http://localhost:8088
+  # -------------------------------------------------------------------------
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    hostname: resourcemanager
+    networks:
+      - bigdata-net
+    ports:
+      - "8088:8088"   # YARN Web UI
+    environment:
+      <<: *hadoop-env
+    depends_on:
+      - namenode
+
+  # -------------------------------------------------------------------------
+  # YARN — NodeManager
+  # NodeManager runs on each worker node and executes the actual tasks
+  # assigned by the ResourceManager.
+  # -------------------------------------------------------------------------
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    hostname: nodemanager
+    networks:
+      - bigdata-net
+    environment:
+      <<: *hadoop-env
+    depends_on:
+      - resourcemanager
+
+  # -------------------------------------------------------------------------
+  # Spark — Master
+  # Spark Master coordinates the cluster. When you submit a PySpark job,
+  # it talks to the Master which distributes work to the Workers.
+  # Web UI: http://localhost:8080
+  # -------------------------------------------------------------------------
+  spark-master:
+    image: bitnami/spark:3.4.1
+    container_name: spark-master
+    hostname: spark-master
+    networks:
+      - bigdata-net
+    ports:
+      - "8080:8080"   # Spark Master Web UI
+      - "7077:7077"   # Spark Master RPC port (workers + submit connect here)
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./batch:/opt/spark-apps/batch        # your PySpark scripts
+      - ./ml:/opt/spark-apps/ml              # Tanusha's ML scripts
+
+  # -------------------------------------------------------------------------
+  # Spark — Worker
+  # Workers execute the actual computation. In production you'd have many.
+  # Here we run one with 2 CPUs and 2GB RAM — enough for dev on sample data.
+  # -------------------------------------------------------------------------
+  spark-worker:
+    image: bitnami/spark:3.4.1
+    container_name: spark-worker
+    hostname: spark-worker
+    networks:
+      - bigdata-net
+    ports:
+      - "8081:8081"   # Spark Worker Web UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+    depends_on:
+      - spark-master
+    volumes:
+      - ./batch:/opt/spark-apps/batch
+      - ./ml:/opt/spark-apps/ml
+
+  # -------------------------------------------------------------------------
+  # Zookeeper
+  # Kafka uses Zookeeper to track which brokers are alive and manage
+  # leader election for topic partitions. Required before starting Kafka.
+  # -------------------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    hostname: zookeeper
+    networks:
+      - bigdata-net
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Kafka — Broker
+  # Kafka is the message bus between the GitHub Events API and your
+  # PySpark streaming job. The producer writes to Kafka topics, the
+  # PySpark consumer reads from them.
+  # -------------------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    hostname: kafka
+    networks:
+      - bigdata-net
+    ports:
+      - "9092:9092"     # Internal (container-to-container)
+      - "29092:29092"   # External (from your laptop / scripts outside Docker)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Two listeners:
+      #   PLAINTEXT       → used by containers on bigdata-net (e.g. Spark consumer)
+      #   PLAINTEXT_HOST  → used by processes on your laptop (e.g. producer script)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"   # topics created explicitly in STREAM-02
+      KAFKA_LOG_RETENTION_HOURS: 48              # keep events 48h (needed for scoring queue)
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Airflow — Postgres (metadata database)
+  # Airflow stores DAG state, task history, and logs in Postgres.
+  # -------------------------------------------------------------------------
+  airflow-db:
+    image: postgres:15
+    container_name: airflow-db
+    hostname: airflow-db
+    networks:
+      - bigdata-net
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Airflow — Init
+  # One-time job that creates the admin user and sets up the database schema.
+  # Runs once then exits — that's normal.
+  # -------------------------------------------------------------------------
+  airflow-init:
+    image: apache/airflow:2.8.1
+    container_name: airflow-init
+    networks:
+      - bigdata-net
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLt0nFmkI8="
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    command: >
+      bash -c "airflow db migrate && airflow users create
+        --username admin --password admin
+        --firstname Hariharan --lastname L
+        --role Admin --email hl5865@nyu.edu"
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+
+  # -------------------------------------------------------------------------
+  # Airflow — Webserver
+  # The Airflow UI where you can trigger DAGs, monitor runs, view logs.
+  # Web UI: http://localhost:8090  (login: admin / admin)
+  # -------------------------------------------------------------------------
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    container_name: airflow-webserver
+    hostname: airflow-webserver
+    networks:
+      - bigdata-net
+    ports:
+      - "8090:8080"   # mapped to 8090 to avoid conflict with Spark UI on 8080
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLt0nFmkI8="
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./batch/dags:/opt/airflow/dags      # your Airflow DAG files go here
+      - ./batch/logs:/opt/airflow/logs
+    command: webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Airflow — Scheduler
+  # The scheduler watches your DAGs and triggers tasks when their schedule
+  # is met (e.g. @daily for INFRA-06, @weekly for INFRA-07).
+  # -------------------------------------------------------------------------
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: airflow-scheduler
+    hostname: airflow-scheduler
+    networks:
+      - bigdata-net
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLt0nFmkI8="
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./batch/dags:/opt/airflow/dags
+      - ./batch/logs:/opt/airflow/logs
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # =========================================================================
+  # GRAFANA DATA STORE — placeholder
+  # Vikram confirms by Day 2 which to use:
+  #   Option A (recommended): InfluxDB for time-series + Postgres for batch
+  #   Option B: Prometheus + Postgres
+  #
+  # Uncomment the correct block below once confirmed.
+  # =========================================================================
+
+  # --- Option A: InfluxDB (for Shreyas's streaming sink + Vikram's dashboards)
+  # influxdb:
+  #   image: influxdb:2.7
+  #   container_name: influxdb
+  #   hostname: influxdb
+  #   networks:
+  #     - bigdata-net
+  #   ports:
+  #     - "8086:8086"
+  #   environment:
+  #     DOCKER_INFLUXDB_INIT_MODE: setup
+  #     DOCKER_INFLUXDB_INIT_USERNAME: admin
+  #     DOCKER_INFLUXDB_INIT_PASSWORD: adminpass
+  #     DOCKER_INFLUXDB_INIT_ORG: github-analytics
+  #     DOCKER_INFLUXDB_INIT_BUCKET: github-stream
+  #     DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: github-analytics-token
+
+  # --- Grafana (uncomment after Vikram confirms data store)
+  # grafana:
+  #   image: grafana/grafana:10.2.0
+  #   container_name: grafana
+  #   hostname: grafana
+  #   networks:
+  #     - bigdata-net
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     GF_SECURITY_ADMIN_USER: admin
+  #     GF_SECURITY_ADMIN_PASSWORD: admin
+  #   depends_on:
+  #     - influxdb
