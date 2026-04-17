@@ -35,7 +35,7 @@ from pyspark.sql.utils import AnalysisException
 # CONFIG — update paths once team confirms
 # ------------------------------------------------------------------------------------------------
 import sys
-sys.path.append("/opt/spark/jobs")
+sys.path.append("/opt/spark-apps")
 from batch.schema import EVENTS_PATH, LABELS_PATH, ENRICHMENT_PATH, FEATURES_PATH
 
 OUTPUT_PATH = FEATURES_PATH

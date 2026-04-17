@@ -23,7 +23,7 @@ from pyspark.sql.utils import AnalysisException
 # CONFIG
 #  ------------------------------------------------------------------------------------------------
 import sys
-sys.path.append("/opt/spark/jobs")
+sys.path.append("/opt/spark-apps")
 from batch.schema import LABELS_PATH, FEATURES_PATH, TRAIN_PATH, HOLDOUT_PATH
 
 

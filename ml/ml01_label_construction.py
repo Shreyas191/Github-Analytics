@@ -27,7 +27,7 @@ from pyspark.sql.utils import AnalysisException
 # CONFIG — update paths if needed
 #  ------------------------------------------------------------------------------------------------
 import sys
-sys.path.append("/opt/spark/jobs")
+sys.path.append("/opt/spark-apps")
 from batch.schema import EVENTS_PATH, LABELS_PATH
 
 EVENTS_PARQUET_PATH = EVENTS_PATH

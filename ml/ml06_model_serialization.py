@@ -24,7 +24,7 @@ from pyspark.ml import PipelineModel
 # CONFIG
 # ─────────────────────────────────────────────
 import sys
-sys.path.append("/opt/spark/jobs")
+sys.path.append("/opt/spark-apps")
 from batch.schema import MODEL_PATH
 
 
