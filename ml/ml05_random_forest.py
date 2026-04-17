@@ -27,9 +27,9 @@ from pyspark.sql.utils import AnalysisException
 #  ------------------------------------------------------------------------------------------------
 # CONFIG
 #  ------------------------------------------------------------------------------------------------
-TRAIN_PATH   = "hdfs://namenode:9000/github/ml/train/"       # ML-04 output
-HOLDOUT_PATH = "hdfs://namenode:9000/github/ml/holdout/"     # ML-04 output
-MODEL_PATH   = "hdfs://namenode:9000/github/ml/model/rf_trained/"  # ML-05 output
+import sys
+sys.path.append("/opt/spark/jobs")
+from batch.schema import TRAIN_PATH, HOLDOUT_PATH, MODEL_PATH
 
 FEATURE_COLS = [
     "f1_stars_48h",

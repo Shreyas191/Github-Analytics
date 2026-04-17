@@ -22,10 +22,9 @@ from pyspark.sql.utils import AnalysisException
 #  ------------------------------------------------------------------------------------------------
 # CONFIG
 #  ------------------------------------------------------------------------------------------------
-LABELS_PATH   = "hdfs://namenode:9000/github/ml/labels/"    # ML-01 output
-FEATURES_PATH = "hdfs://namenode:9000/github/ml/features/"  # ML-03 output
-TRAIN_PATH    = "hdfs://namenode:9000/github/ml/train/"     # training set output
-HOLDOUT_PATH  = "hdfs://namenode:9000/github/ml/holdout/"   # holdout set output
+import sys
+sys.path.append("/opt/spark/jobs")
+from batch.schema import LABELS_PATH, FEATURES_PATH, TRAIN_PATH, HOLDOUT_PATH
 
 
 def main():

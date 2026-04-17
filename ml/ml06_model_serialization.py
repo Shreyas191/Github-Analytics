@@ -23,7 +23,9 @@ from pyspark.ml import PipelineModel
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-MODEL_PATH = "hdfs://namenode:9000/github/ml/model/rf_trained/"
+import sys
+sys.path.append("/opt/spark/jobs")
+from batch.schema import MODEL_PATH
 
 
 def main():
