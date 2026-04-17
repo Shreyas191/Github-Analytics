@@ -252,25 +252,38 @@ class GitHubEventsProducer:
         actor   = event.get("actor", {})
         payload = event.get("payload", {})
 
+        def to_long(val) -> int | None:
+            """Cast to Python int (maps to LongType in Spark). Returns None if missing."""
+            return int(val) if val is not None else None
+
+        def to_int(val) -> int | None:
+            """Cast to Python int (maps to IntegerType in Spark). Returns None if missing."""
+            return int(val) if val is not None else None
+
         return {
             # Core fields — always present
-            "event_id":    event.get("id"),
+            # event_id is StringType in schema — keep as string
+            "event_id":    str(event.get("id")) if event.get("id") is not None else None,
             "event_type":  event.get("type"),
-            "repo_id":     repo.get("id"),
+            # repo_id, actor_id are LongType — cast to int
+            "repo_id":     to_long(repo.get("id")),
             "repo_name":   repo.get("name"),
-            "actor_id":    actor.get("id"),
+            "actor_id":    to_long(actor.get("id")),
             "actor_login": actor.get("login"),
+            # created_at is TimestampType — keep ISO 8601 string, Spark parses it
             "created_at":  event.get("created_at"),
             "ingested_at": datetime.now(timezone.utc).isoformat(),
 
             # Event-type-specific payload fields
             # Null-filled for event types where they don't apply
-            "ref":         payload.get("ref"),              # CreateEvent: branch/tag name
+            "ref":         payload.get("ref"),              # CreateEvent / PushEvent
             "ref_type":    payload.get("ref_type"),         # CreateEvent: "repository"/"branch"/"tag"
             "action":      payload.get("action"),           # IssuesEvent, PREvent
-            "forkee_id":   payload.get("forkee", {}).get("id") if payload.get("forkee") else None,
-            "pr_number":   payload.get("number"),           # PREvent
-            "push_size":   payload.get("size"),             # PushEvent: number of commits
+            # forkee_id, pr_number are LongType — cast to int
+            "forkee_id":   to_long(payload.get("forkee", {}).get("id") if payload.get("forkee") else None),
+            "pr_number":   to_long(payload.get("number")),
+            # push_size is IntegerType — cast to int
+            "push_size":   to_int(payload.get("size")),
             "language":    None,                            # Enriched by batch path (INFRA-04)
         }
 
