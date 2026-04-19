@@ -1,0 +1,53 @@
+# Grafana datasource provisioning
+# Author: Vikram Markali (vrm9190) -- VIZ-01
+#
+# Both datasources are provisioned at container startup.
+# No manual "Add datasource" step needed in the Grafana UI.
+#
+# InfluxDB  -- streaming path (star velocity, language momentum from STREAM-05)
+# PostgreSQL -- batch path (PMI, Health Score, language velocity, geo heatmap)
+
+apiVersion: 1
+
+datasources:
+
+  # ---------------------------------------------------------------------------
+  # InfluxDB 2.7 -- Flux query language
+  # Fed by Shreyas's STREAM-05 structured streaming job.
+  # Used by: VIZ-03 live leaderboard, VIZ-03 trending repos panel
+  # ---------------------------------------------------------------------------
+  - name: InfluxDB-Stream
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: github-analytics
+      defaultBucket: github-stream
+      tlsSkipVerify: true
+    secureJsonData:
+      token: github-analytics-token
+    isDefault: true
+    editable: false
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL -- batch analytics outputs
+  # Written by Vikram's VIZ-04, VIZ-05, VIZ-07, VIZ-08 PySpark jobs.
+  # Used by: geo heatmap, PMI graph, Health Score, language velocity panels
+  # ---------------------------------------------------------------------------
+  - name: PostgreSQL-Batch
+    type: postgres
+    access: proxy
+    url: postgres-analytics:5432
+    database: github_analytics
+    user: analytics
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timescaledb: false
+    secureJsonData:
+      password: analytics
+    editable: false

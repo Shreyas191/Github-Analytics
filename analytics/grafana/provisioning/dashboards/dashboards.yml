@@ -1,0 +1,18 @@
+# Grafana dashboard provisioning
+# Author: Vikram Markali (vrm9190) -- VIZ-01
+#
+# Tells Grafana where to look for dashboard JSON files.
+# Dashboard JSON files will be added in VIZ-03 through VIZ-08.
+
+apiVersion: 1
+
+providers:
+  - name: GitHub Analytics
+    orgId: 1
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
