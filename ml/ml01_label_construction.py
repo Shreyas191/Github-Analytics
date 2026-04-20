@@ -26,8 +26,12 @@ from pyspark.sql.utils import AnalysisException
 #  ------------------------------------------------------------------------------------------------
 # CONFIG — update paths if needed
 #  ------------------------------------------------------------------------------------------------
-EVENTS_PARQUET_PATH = "hdfs://namenode:9000/github/events/parquet/"
-OUTPUT_PATH         = "hdfs://namenode:9000/github/ml/labels/"
+import sys
+sys.path.append("/opt/spark-apps")
+from batch.schema import EVENTS_PATH, LABELS_PATH
+
+EVENTS_PARQUET_PATH = EVENTS_PATH
+OUTPUT_PATH         = LABELS_PATH
 STAR_THRESHOLD      = 1000
 MIN_DAYS_AFTER_T0   = 3
 MAX_DAYS_AFTER_T0   = 90

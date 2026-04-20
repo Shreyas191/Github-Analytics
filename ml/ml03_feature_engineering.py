@@ -34,10 +34,11 @@ from pyspark.sql.utils import AnalysisException
 # ------------------------------------------------------------------------------------------------
 # CONFIG — update paths once team confirms
 # ------------------------------------------------------------------------------------------------
-EVENTS_PATH     = "hdfs://namenode:9000/github/events/parquet/"   # Hariharan INFRA-04
-LABELS_PATH     = "hdfs://namenode:9000/github/ml/labels/"        # ML-01 output
-ENRICHMENT_PATH = "hdfs://namenode:9000/github/ml/enrichment/"    # Vikram VIZ-02
-OUTPUT_PATH     = "hdfs://namenode:9000/github/ml/features/"      # ML-03 output
+import sys
+sys.path.append("/opt/spark-apps")
+from batch.schema import EVENTS_PATH, LABELS_PATH, ENRICHMENT_PATH, FEATURES_PATH
+
+OUTPUT_PATH = FEATURES_PATH
 WINDOW_HOURS    = 48
 
 
