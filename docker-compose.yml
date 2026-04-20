@@ -47,6 +47,9 @@ volumes:
   datanode1-data:
   datanode2-data:
   airflow-db-data:
+  influxdb-data:
+  postgres-analytics-data:
+  grafana-data:
 
 # ===========================================================================
 # SERVICES
@@ -172,8 +175,9 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
     volumes:
-      - ./batch:/opt/spark-apps/batch        # your PySpark scripts
-      - ./ml:/opt/spark-apps/ml              # Tanusha's ML scripts
+      - ./batch:/opt/spark-apps/batch
+      - ./ml:/opt/spark-apps/ml
+      - ./analytics:/opt/spark-apps/analytics
 
   # -------------------------------------------------------------------------
   # Spark — Worker
@@ -200,6 +204,7 @@ services:
     volumes:
       - ./batch:/opt/spark-apps/batch
       - ./ml:/opt/spark-apps/ml
+      - ./analytics:/opt/spark-apps/analytics
 
   # -------------------------------------------------------------------------
   # Zookeeper
@@ -362,42 +367,101 @@ services:
         condition: service_completed_successfully
 
   # =========================================================================
-  # GRAFANA DATA STORE — placeholder
-  # Vikram confirms by Day 2 which to use:
-  #   Option A (recommended): InfluxDB for time-series + Postgres for batch
-  #   Option B: Prometheus + Postgres
+  # GRAFANA DATA STORES — VIZ-01 (Vikram Markali, vrm9190)
   #
-  # Uncomment the correct block below once confirmed.
+  # Decision: Option A confirmed.
+  #   InfluxDB 2.7  -- time-series store for Shreyas's streaming sink (STREAM-05)
+  #                    and Grafana's live panels (star velocity, language momentum)
+  #   postgres-analytics -- batch outputs: PMI table, Health Score, language
+  #                         velocity rankings. Separate from airflow-db so
+  #                         Grafana queries never compete with Airflow metadata.
+  #   Grafana 10.2  -- dashboard layer; both datasources provisioned at startup
+  #                    via analytics/grafana/provisioning/
   # =========================================================================
 
-  # --- Option A: InfluxDB (for Shreyas's streaming sink + Vikram's dashboards)
-  # influxdb:
-  #   image: influxdb:2.7
-  #   container_name: influxdb
-  #   hostname: influxdb
-  #   networks:
-  #     - bigdata-net
-  #   ports:
-  #     - "8086:8086"
-  #   environment:
-  #     DOCKER_INFLUXDB_INIT_MODE: setup
-  #     DOCKER_INFLUXDB_INIT_USERNAME: admin
-  #     DOCKER_INFLUXDB_INIT_PASSWORD: adminpass
-  #     DOCKER_INFLUXDB_INIT_ORG: github-analytics
-  #     DOCKER_INFLUXDB_INIT_BUCKET: github-stream
-  #     DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: github-analytics-token
+  # -------------------------------------------------------------------------
+  # InfluxDB 2.7
+  # Time-series store for streaming event metrics.
+  # Shreyas's STREAM-05 writes here; Grafana reads here for live panels.
+  # Web UI: http://localhost:8086  (login: admin / adminpass)
+  # Token for API/Grafana: github-analytics-token
+  # -------------------------------------------------------------------------
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    hostname: influxdb
+    networks:
+      - bigdata-net
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: adminpass
+      DOCKER_INFLUXDB_INIT_ORG: github-analytics
+      DOCKER_INFLUXDB_INIT_BUCKET: github-stream
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: github-analytics-token
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  # --- Grafana (uncomment after Vikram confirms data store)
-  # grafana:
-  #   image: grafana/grafana:10.2.0
-  #   container_name: grafana
-  #   hostname: grafana
-  #   networks:
-  #     - bigdata-net
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     GF_SECURITY_ADMIN_USER: admin
-  #     GF_SECURITY_ADMIN_PASSWORD: admin
-  #   depends_on:
-  #     - influxdb
+  # -------------------------------------------------------------------------
+  # PostgreSQL — Analytics (separate from airflow-db on port 5432)
+  # Stores batch-computed outputs for Grafana:
+  #   - language_velocity    (VIZ-08)
+  #   - pmi_pairs            (VIZ-05)
+  #   - ecosystem_health     (VIZ-07)
+  #   - geo_contributions    (VIZ-04)
+  # Port 5433 on host avoids conflict with airflow-db on 5432.
+  # -------------------------------------------------------------------------
+  postgres-analytics:
+    image: postgres:15
+    container_name: postgres-analytics
+    hostname: postgres-analytics
+    networks:
+      - bigdata-net
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-analytics-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+      POSTGRES_DB: github_analytics
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Grafana 10.2
+  # Dashboard layer. Both datasources (InfluxDB + PostgreSQL) are provisioned
+  # automatically via analytics/grafana/provisioning/ so no manual setup needed.
+  # Web UI: http://localhost:3000  (login: admin / admin)
+  # -------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    hostname: grafana
+    networks:
+      - bigdata-net
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./analytics/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/home.json
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      postgres-analytics:
+        condition: service_healthy
