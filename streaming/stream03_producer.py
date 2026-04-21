@@ -305,6 +305,21 @@ class GitHubEventsProducer:
             f"PAT status={self.rotator.status()}"
         )
 
+        # Write stats to file so stream07_metrics.py can read them
+        import json
+        try:
+            with open("/tmp/stream03_stats.json", "w") as f:
+                json.dump({
+                    "events_received":  self.stats["events_received"],
+                    "events_published": self.stats["events_published"],
+                    "api_calls":        self.stats["api_calls"],
+                    "api_304s":         self.stats["api_304s"],
+                    "uptime_min":       round(uptime_min, 2),
+                    "rate_per_min":     round(rate, 2),
+                }, f)
+        except Exception as e:
+            logger.warning(f"Could not write stats file: {e}")
+
     # ------------------------------------------------------------------
     # Graceful shutdown
     # ------------------------------------------------------------------

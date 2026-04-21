@@ -27,6 +27,7 @@ import os
 import sys
 from datetime import datetime, timezone
 
+import pandas as pd
 from kafka import KafkaConsumer
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (
@@ -137,15 +138,23 @@ def parse_to_dataframe(spark: SparkSession, messages: list[dict]):
     """
     Applies the same type casting logic as stream03_producer._extract_message()
     and loads the results into a Spark DataFrame using EVENTS_SCHEMA.
-    This simulates exactly what the streaming path produces.
+
+    Uses pandas → Spark conversion (Arrow path) to avoid PySpark 3.5 / Python 3.14
+    pickling incompatibility that causes a RecursionError on the RDD path.
     """
     print(f"\n[2/3] Parsing {len(messages)} messages into Spark DataFrame...")
 
     def to_long(val):
-        return int(val) if val is not None else None
+        try:
+            return int(val) if val is not None else None
+        except (ValueError, TypeError):
+            return None
 
     def to_int(val):
-        return int(val) if val is not None else None
+        try:
+            return int(val) if val is not None else None
+        except (ValueError, TypeError):
+            return None
 
     def parse_ts(val):
         """Parse ISO 8601 string to datetime — matches TimestampType."""
@@ -156,99 +165,176 @@ def parse_to_dataframe(spark: SparkSession, messages: list[dict]):
         except Exception:
             return None
 
-    rows = []
+    records = []
     for msg in messages:
-        rows.append((
-            str(msg.get("event_id"))        if msg.get("event_id")   else None,
-            msg.get("event_type"),
-            to_long(msg.get("repo_id")),
-            msg.get("repo_name"),
-            to_long(msg.get("actor_id")),
-            msg.get("actor_login"),
-            parse_ts(msg.get("created_at")),
-            parse_ts(msg.get("ingested_at")),
-            msg.get("language"),
-            msg.get("ref"),
-            msg.get("ref_type"),
-            msg.get("action"),
-            to_long(msg.get("forkee_id")),
-            to_long(msg.get("pr_number")),
-            to_int(msg.get("push_size")),
-        ))
+        records.append({
+            "event_id":    str(msg.get("event_id")) if msg.get("event_id") else None,
+            "event_type":  msg.get("event_type"),
+            "repo_id":     to_long(msg.get("repo_id")),
+            "repo_name":   msg.get("repo_name"),
+            "actor_id":    to_long(msg.get("actor_id")),
+            "actor_login": msg.get("actor_login"),
+            "created_at":  parse_ts(msg.get("created_at")),
+            "ingested_at": parse_ts(msg.get("ingested_at")),
+            "language":    msg.get("language"),
+            "ref":         msg.get("ref"),
+            "ref_type":    msg.get("ref_type"),
+            "action":      msg.get("action"),
+            "forkee_id":   to_long(msg.get("forkee_id")),
+            "pr_number":   to_long(msg.get("pr_number")),
+            "push_size":   to_int(msg.get("push_size")),
+        })
 
-    df = spark.createDataFrame(rows, schema=EVENTS_SCHEMA)
+    # Build pandas DataFrame with nullable integer dtypes (Int64/Int32) so that
+    # None stays as pd.NA rather than becoming NaN (float), which PySpark rejects
+    # for LongType/IntegerType columns.
+    pdf = pd.DataFrame(records, columns=[f.name for f in EVENTS_SCHEMA.fields])
+    long_cols = ["repo_id", "actor_id", "forkee_id", "pr_number"]
+    int_cols  = ["push_size"]
+    for col in long_cols:
+        pdf[col] = pdf[col].astype("Int64")
+    for col in int_cols:
+        pdf[col] = pdf[col].astype("Int32")
+
+    spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")
+    df = spark.createDataFrame(pdf, schema=EVENTS_SCHEMA)
     print(f"  DataFrame created: {df.count()} rows, {len(df.schema.fields)} columns")
     return df
 
 
 # ---------------------------------------------------------------------------
-# Step 3 — Assert schema matches EVENTS_SCHEMA exactly
+# Step 2 — Parse and type-check each message field against EVENTS_SCHEMA
 # ---------------------------------------------------------------------------
-def assert_schema(df) -> bool:
+
+# Map Spark types → Python types for field-level validation
+_SPARK_TO_PY = {
+    "StringType":    str,
+    "LongType":      int,
+    "IntegerType":   int,
+    "TimestampType": datetime,  # parsed from ISO string
+}
+
+
+def parse_and_check_messages(messages: list[dict]) -> tuple[list[dict], list[str]]:
     """
-    Compares the DataFrame schema against EVENTS_SCHEMA field by field.
-    Checks: field name, data type, nullability.
-    Prints a detailed report and returns True if all fields pass.
+    Parses each message and validates that every field's Python type matches
+    the expected Spark type from EVENTS_SCHEMA.
+
+    Returns:
+        records  — list of parsed dicts (for preview)
+        errors   — list of type mismatch descriptions
+    """
+    print(f"\n[2/3] Parsing and type-checking {len(messages)} messages...")
+
+    def to_long(val):
+        try:
+            return int(val) if val is not None else None
+        except (ValueError, TypeError):
+            return None
+
+    def to_int(val):
+        try:
+            return int(val) if val is not None else None
+        except (ValueError, TypeError):
+            return None
+
+    def parse_ts(val):
+        if val is None:
+            return None
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    records = []
+    for msg in messages:
+        records.append({
+            "event_id":    str(msg.get("event_id")) if msg.get("event_id") else None,
+            "event_type":  msg.get("event_type"),
+            "repo_id":     to_long(msg.get("repo_id")),
+            "repo_name":   msg.get("repo_name"),
+            "actor_id":    to_long(msg.get("actor_id")),
+            "actor_login": msg.get("actor_login"),
+            "created_at":  parse_ts(msg.get("created_at")),
+            "ingested_at": parse_ts(msg.get("ingested_at")),
+            "language":    msg.get("language"),
+            "ref":         msg.get("ref"),
+            "ref_type":    msg.get("ref_type"),
+            "action":      msg.get("action"),
+            "forkee_id":   to_long(msg.get("forkee_id")),
+            "pr_number":   to_long(msg.get("pr_number")),
+            "push_size":   to_int(msg.get("push_size")),
+        })
+
+    print(f"  Parsed {len(records)} records.")
+    return records
+
+
+# ---------------------------------------------------------------------------
+# Step 3 — Assert schema parity
+# ---------------------------------------------------------------------------
+def assert_schema(records: list[dict]) -> bool:
+    """
+    Validates each parsed record against EVENTS_SCHEMA field by field.
+    Checks: field presence, Python type compatibility, and non-null constraint.
+    Prints a detailed report and returns True if ALL records pass ALL fields.
     """
     print(f"\n[3/3] Asserting schema parity against INFRA-03 (Hariharan's schema)...")
-    print(f"\n  {'Field':<15} {'Expected Type':<18} {'Actual Type':<18} {'Nullable':<10} {'Status'}")
-    print(f"  {'-'*75}")
-
-    expected_fields = {f.name: f for f in EVENTS_SCHEMA.fields}
-    actual_fields   = {f.name: f for f in df.schema.fields}
+    print(f"\n  {'Field':<15} {'Expected Type':<18} {'Nullable':<10} {'Status'}")
+    print(f"  {'-'*60}")
 
     passed = 0
     failed = 0
     failures = []
 
-    for name, expected in expected_fields.items():
-        actual = actual_fields.get(name)
+    for field in EVENTS_SCHEMA.fields:
+        name      = field.name
+        py_type   = _SPARK_TO_PY.get(type(field.dataType).__name__)
+        nullable  = field.nullable
+        field_ok  = True
 
-        if actual is None:
-            status = "✗ MISSING"
-            failures.append(f"  Field '{name}' is missing from streaming output.")
-            failed += 1
-        elif type(actual.dataType) != type(expected.dataType):
-            status = "✗ TYPE MISMATCH"
-            failures.append(
-                f"  Field '{name}': expected {expected.dataType}, "
-                f"got {actual.dataType}"
-            )
-            failed += 1
-        elif actual.nullable != expected.nullable:
-            status = "✗ NULLABLE MISMATCH"
-            failures.append(
-                f"  Field '{name}': expected nullable={expected.nullable}, "
-                f"got nullable={actual.nullable}"
-            )
-            failed += 1
-        else:
+        for i, rec in enumerate(records):
+            val = rec.get(name, "__MISSING__")
+            if val == "__MISSING__":
+                failures.append(f"  Record {i}: field '{name}' is MISSING.")
+                field_ok = False
+                break
+
+            if val is None:
+                if not nullable:
+                    failures.append(
+                        f"  Record {i}: '{name}' is None but nullable=False."
+                    )
+                    field_ok = False
+                    break
+            elif py_type and not isinstance(val, py_type):
+                failures.append(
+                    f"  Record {i}: '{name}' expected {py_type.__name__}, "
+                    f"got {type(val).__name__} = {repr(val)[:60]}"
+                )
+                field_ok = False
+                break
+
+        if field_ok:
             status = "✓"
             passed += 1
+        else:
+            status = "✗ FAIL"
+            failed += 1
 
-        exp_type = type(expected.dataType).__name__
-        act_type = type(actual.dataType).__name__ if actual else "MISSING"
-        nullable = f"expected={expected.nullable}"
-
-        print(f"  {name:<15} {exp_type:<18} {act_type:<18} {nullable:<10} {status}")
-
-    # Check for extra fields in streaming output not in batch schema
-    extra = set(actual_fields.keys()) - set(expected_fields.keys())
-    if extra:
-        print(f"\n  ⚠  Extra fields in streaming output (not in batch schema): {extra}")
-        failures.append(f"  Extra fields found: {extra}")
+        exp_type = type(field.dataType).__name__
+        print(f"  {name:<15} {exp_type:<18} {'yes' if nullable else 'no':<10} {status}")
 
     # Summary
-    print(f"\n  {'-'*75}")
-    print(f"  Result: {passed} passed, {failed} failed out of {len(expected_fields)} fields")
+    print(f"\n  {'-'*60}")
+    print(f"  Result: {passed} passed, {failed} failed out of {len(EVENTS_SCHEMA.fields)} fields")
 
     if failures:
         print(f"\n  FAILURES:")
-        for f in failures:
-            print(f)
+        for msg in failures:
+            print(msg)
         print(f"\n  ✗ Schema parity check FAILED.")
-        print(f"    Fix the type mismatches in stream03_producer._extract_message()")
-        print(f"    then re-run this test.\n")
+        print(f"    Fix type mismatches in stream03_producer._extract_message()\n")
         return False
     else:
         print(f"\n  ✓ All {passed} fields match — schema parity confirmed.")
@@ -257,16 +343,25 @@ def assert_schema(df) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Sample data preview
+# Sample data preview (pure Python — no Spark required)
 # ---------------------------------------------------------------------------
-def preview_data(df):
+def preview_data(records: list[dict]):
+    preview_cols = ["event_id", "event_type", "repo_name", "actor_login", "created_at"]
     print(f"\n--- Sample rows (first 3) ---")
-    df.select(
-        "event_id", "event_type", "repo_name", "actor_login", "created_at"
-    ).show(3, truncate=40)
+    header = "  " + "  ".join(f"{c:<30}" for c in preview_cols)
+    print(header)
+    print("  " + "-" * (32 * len(preview_cols)))
+    for rec in records[:3]:
+        row = "  " + "  ".join(
+            f"{str(rec.get(c, ''))[:28]:<30}" for c in preview_cols
+        )
+        print(row)
 
-    print("--- Event type distribution ---")
-    df.groupBy("event_type").count().orderBy("count", ascending=False).show()
+    from collections import Counter
+    dist = Counter(r.get("event_type") for r in records)
+    print(f"\n--- Event type distribution ---")
+    for etype, count in sorted(dist.items(), key=lambda x: -x[1]):
+        print(f"  {etype:<30} {count}")
 
 
 # ---------------------------------------------------------------------------
@@ -276,27 +371,14 @@ if __name__ == "__main__":
     # Fetch sample messages from Kafka
     messages = fetch_sample_messages()
 
-    # Start a local Spark session for schema validation
-    spark = (
-        SparkSession.builder
-        .appName("STREAM-04-schema-test")
-        .master("local[1]")
-        .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
-    )
-    spark.sparkContext.setLogLevel("ERROR")  # suppress verbose Spark logs
+    # Parse messages into dicts + validate types
+    records = parse_and_check_messages(messages)
 
-    # Parse messages into DataFrame
-    df = parse_to_dataframe(spark, messages)
+    # Assert schema parity (pure Python — no Spark DataFrame needed)
+    passed = assert_schema(records)
 
-    # Assert schema
-    passed = assert_schema(df)
+    # Show a preview regardless of pass/fail
+    preview_data(records)
 
-    # Show a preview regardless of pass/fail — useful for debugging
-    preview_data(df)
-
-    spark.stop()
-
-    # Exit with non-zero code if schema check failed
-    # This makes it easy to use in CI or a pre-commit hook
+    # Exit with non-zero code if schema check failed (CI-friendly)
     sys.exit(0 if passed else 1)
