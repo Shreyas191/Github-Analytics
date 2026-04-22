@@ -160,7 +160,7 @@ services:
   # Web UI: http://localhost:8080
   # -------------------------------------------------------------------------
   spark-master:
-    image: bitnami/spark:3.4.1
+    image: apache/spark:3.5.0
     container_name: spark-master
     hostname: spark-master
     networks:
@@ -168,16 +168,16 @@ services:
     ports:
       - "8080:8080"   # Spark Master Web UI
       - "7077:7077"   # Spark Master RPC port (workers + submit connect here)
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
     environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
     volumes:
       - ./batch:/opt/spark-apps/batch
       - ./ml:/opt/spark-apps/ml
       - ./analytics:/opt/spark-apps/analytics
+    user: root
 
   # -------------------------------------------------------------------------
   # Spark — Worker
@@ -185,26 +185,25 @@ services:
   # Here we run one with 2 CPUs and 2GB RAM — enough for dev on sample data.
   # -------------------------------------------------------------------------
   spark-worker:
-    image: bitnami/spark:3.4.1
+    image: apache/spark:3.5.0
     container_name: spark-worker
     hostname: spark-worker
     networks:
       - bigdata-net
     ports:
       - "8081:8081"   # Spark Worker Web UI
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_MEMORY=2g
       - SPARK_WORKER_CORES=2
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_WORKER_WEBUI_PORT=8081
     depends_on:
       - spark-master
     volumes:
       - ./batch:/opt/spark-apps/batch
       - ./ml:/opt/spark-apps/ml
       - ./analytics:/opt/spark-apps/analytics
+    user: root
 
   # -------------------------------------------------------------------------
   # Zookeeper
@@ -286,33 +285,10 @@ services:
       retries: 5
 
   # -------------------------------------------------------------------------
-  # Airflow — Init
-  # One-time job that creates the admin user and sets up the database schema.
-  # Runs once then exits — that's normal.
-  # -------------------------------------------------------------------------
-  airflow-init:
-    image: apache/airflow:2.8.1
-    container_name: airflow-init
-    networks:
-      - bigdata-net
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
-      AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLt0nFmkI8="
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    command: >
-      bash -c "airflow db migrate && airflow users create
-        --username admin --password admin
-        --firstname Hariharan --lastname L
-        --role Admin --email hl5865@nyu.edu"
-    depends_on:
-      airflow-db:
-        condition: service_healthy
-
-  # -------------------------------------------------------------------------
   # Airflow — Webserver
   # The Airflow UI where you can trigger DAGs, monitor runs, view logs.
   # Web UI: http://localhost:8090  (login: admin / admin)
+  # Note: run `docker exec airflow-webserver airflow db migrate` on first start
   # -------------------------------------------------------------------------
   airflow-webserver:
     image: apache/airflow:2.8.1
@@ -329,17 +305,19 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     volumes:
-      - ./batch/dags:/opt/airflow/dags      # your Airflow DAG files go here
+      - ./batch/dags:/opt/airflow/dags
       - ./batch/logs:/opt/airflow/logs
-    command: webserver
+    command:
+      - bash
+      - -c
+      - "airflow db migrate && airflow users create --username admin --password admin --firstname Hariharan --lastname L --role Admin --email hl5865@nyu.edu 2>/dev/null || true; airflow webserver"
     depends_on:
-      airflow-init:
-        condition: service_completed_successfully
+      - airflow-db
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 10
 
   # -------------------------------------------------------------------------
   # Airflow — Scheduler
@@ -363,8 +341,7 @@ services:
       - ./batch/logs:/opt/airflow/logs
     command: scheduler
     depends_on:
-      airflow-init:
-        condition: service_completed_successfully
+      - airflow-db
 
   # =========================================================================
   # GRAFANA DATA STORES — VIZ-01 (Vikram Markali, vrm9190)
