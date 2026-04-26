@@ -1,0 +1,922 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.2.0" },
+    { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "1.0.0" },
+    { "type": "panel", "id": "geomap", "name": "Geomap", "version": "" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "" },
+    { "type": "panel", "id": "bargauge", "name": "Bar gauge", "version": "" },
+    { "type": "panel", "id": "barchart", "name": "Bar chart", "version": "" },
+    { "type": "panel", "id": "text", "name": "Text", "version": "" }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "GitHub Developer Ecosystem -- Batch Analytics Dashboard (VIZ-04 through VIZ-08). Geo heatmap, language health scores, PMI co-occurrence graph, velocity rankings, and time series trends from the Spark -> PostgreSQL batch path.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 200,
+      "title": "Overview",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(DISTINCT language) AS value FROM ecosystem_health;",
+          "refId": "A"
+        }
+      ],
+      "title": "Languages Scored",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS value FROM pmi_pairs;",
+          "refId": "A"
+        }
+      ],
+      "title": "Language Co-occurrence Pairs",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "purple", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(DISTINCT country_code) AS value FROM geo_contributions;",
+          "refId": "A"
+        }
+      ],
+      "title": "Countries with Contributions",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "orange", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT SUM(actor_count) AS value FROM geo_contributions WHERE year = (SELECT MAX(year) FROM geo_contributions);",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Contributors (Latest Year)",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 201,
+      "title": "Geographic Distribution (VIZ-04)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-BlPu" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null    },
+              { "color": "yellow", "value": 1000    },
+              { "color": "orange", "value": 10000   },
+              { "color": "red",    "value": 100000  }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 14, "w": 16, "x": 0, "y": 6 },
+      "id": 10,
+      "options": {
+        "basemap": { "config": {}, "name": "Layer 0", "type": "default" },
+        "controls": { "mouseWheelZoom": true, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": false, "showZoom": true },
+        "layers": [
+          {
+            "config": {
+              "rules": [],
+              "style": {
+                "color": { "field": "actor_count", "fixed": "dark-green" },
+                "fillOpacity": 0.7,
+                "opacity": 0.7,
+                "rotation": { "fixed": 0, "max": 360, "min": -360, "mode": "mod" },
+                "size": { "field": "actor_count", "fixed": 5, "max": 30, "min": 3, "mode": "field" },
+                "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" },
+                "symbolAlign": { "h": "center", "v": "center" },
+                "textConfig": { "fontSize": 12, "offsetX": 0, "offsetY": 0, "textAlign": "center", "textBaseline": "middle" }
+              },
+              "tooltip": true
+            },
+            "location": { "mode": "lookup", "lookup": "country_code", "lookupField": "iso2" },
+            "name": "Contributor Density",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": { "mode": "details" },
+        "view": { "allLayers": true, "id": "zero", "lat": 25, "lon": 10, "zoom": 1.5 }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT country_code, country_name, SUM(actor_count) AS actor_count, SUM(event_count) AS event_count FROM geo_contributions GROUP BY country_code, country_name ORDER BY actor_count DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Global Contributor Distribution",
+      "type": "geomap"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "color-background", "mode": "gradient" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue",   "value": null   },
+              { "color": "green",  "value": 1000   },
+              { "color": "yellow", "value": 10000  },
+              { "color": "orange", "value": 50000  },
+              { "color": "red",    "value": 200000 }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "country_name" },
+            "properties": [
+              { "id": "custom.width", "value": 160 },
+              { "id": "custom.cellOptions", "value": { "type": "auto" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "actor_count" },
+            "properties": [{ "id": "displayName", "value": "Contributors" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "event_count" },
+            "properties": [{ "id": "displayName", "value": "Events" }]
+          }
+        ]
+      },
+      "gridPos": { "h": 14, "w": 8, "x": 16, "y": 6 },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Contributors" }]
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT country_name, SUM(actor_count) AS actor_count, SUM(event_count) AS event_count FROM geo_contributions GROUP BY country_name ORDER BY actor_count DESC LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 20 Countries by Contributors",
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "id": 202,
+      "title": "Ecosystem Health Score (VIZ-07)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-GrYlRd" },
+          "custom": {
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineWidth": 0
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 40   },
+              { "color": "green",  "value": 70   }
+            ]
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 21 },
+      "id": 20,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "text": {},
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT language AS metric, health_score AS value FROM ecosystem_health ORDER BY health_score DESC LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Ecosystem Health Score -- Top 20 Languages",
+      "type": "bargauge"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "language" },
+            "properties": [{ "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "health_score" },
+            "properties": [
+              { "id": "displayName", "value": "Health" },
+              { "id": "custom.width", "value": 70 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red",    "value": null },
+                    { "color": "yellow", "value": 40   },
+                    { "color": "green",  "value": 70   }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "velocity_score" },
+            "properties": [{ "id": "displayName", "value": "Velocity" }, { "id": "custom.width", "value": 80 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "growth_score" },
+            "properties": [{ "id": "displayName", "value": "Growth" }, { "id": "custom.width", "value": 80 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "maintenance_score" },
+            "properties": [{ "id": "displayName", "value": "Maintenance" }, { "id": "custom.width", "value": 90 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "diversity_score" },
+            "properties": [{ "id": "displayName", "value": "Diversity" }, { "id": "custom.width", "value": 80 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "total_repos" },
+            "properties": [{ "id": "displayName", "value": "Repos" }, { "id": "custom.width", "value": 80 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "total_actors" },
+            "properties": [{ "id": "displayName", "value": "Contributors" }, { "id": "custom.width", "value": 100 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 21 },
+      "id": 21,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Health" }]
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT language, health_score, velocity_score, growth_score, maintenance_score, diversity_score, total_repos, total_actors FROM ecosystem_health ORDER BY health_score DESC LIMIT 25;",
+          "refId": "A"
+        }
+      ],
+      "title": "Health Score Breakdown by Component",
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "id": 203,
+      "title": "Language Velocity Rankings (VIZ-08)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "velocity_rank" },
+            "properties": [{ "id": "displayName", "value": "Rank" }, { "id": "custom.width", "value": 60 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "language" },
+            "properties": [{ "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "yoy_growth_rate" },
+            "properties": [
+              { "id": "displayName", "value": "YoY Growth" },
+              { "id": "custom.width", "value": 110 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null  },
+                    { "color": "yellow", "value": 0.5  },
+                    { "color": "red",    "value": 1.0  }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "total_stars" },
+            "properties": [{ "id": "displayName", "value": "Total Stars" }, { "id": "custom.width", "value": 100 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 34 },
+      "id": 30,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": false, "displayName": "Rank" }]
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT velocity_rank, language, yoy_growth_rate, total_stars FROM language_rankings WHERE direction = 'rising' ORDER BY velocity_rank ASC LIMIT 10;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 10 Rising Languages (YoY Star Growth)",
+      "type": "table"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "velocity_rank" },
+            "properties": [{ "id": "displayName", "value": "Rank" }, { "id": "custom.width", "value": 60 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "language" },
+            "properties": [{ "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "yoy_growth_rate" },
+            "properties": [
+              { "id": "displayName", "value": "YoY Growth" },
+              { "id": "custom.width", "value": 110 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red",    "value": null  },
+                    { "color": "yellow", "value": -0.5  },
+                    { "color": "green",  "value": 0.0   }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "total_stars" },
+            "properties": [{ "id": "displayName", "value": "Total Stars" }, { "id": "custom.width", "value": 100 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 34 },
+      "id": 31,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": false, "displayName": "Rank" }]
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT velocity_rank, language, yoy_growth_rate, total_stars FROM language_rankings WHERE direction = 'declining' ORDER BY velocity_rank ASC LIMIT 10;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 10 Declining Languages (YoY Star Growth)",
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "id": 204,
+      "title": "Language Adoption Trends Over Time (VIZ-08)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisColorMode": "text",
+            "axisLabel": "Stars",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 45 },
+      "id": 40,
+      "options": {
+        "legend": { "calcs": ["sum", "max", "lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "time_series",
+          "rawSql": "SELECT\n  (year_month || '-01')::timestamp AS time,\n  language AS metric,\n  star_count AS value\nFROM language_velocity\nWHERE language IN (\n  SELECT language FROM language_rankings ORDER BY total_stars DESC LIMIT 10\n)\nORDER BY time ASC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Star Acquisition Over Time -- Top 10 Languages",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisColorMode": "text",
+            "axisLabel": "Contributors",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 55 },
+      "id": 41,
+      "options": {
+        "legend": { "calcs": ["max", "lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "time_series",
+          "rawSql": "SELECT\n  (year_month || '-01')::timestamp AS time,\n  language AS metric,\n  actor_count AS value\nFROM language_velocity\nWHERE language IN (\n  SELECT language FROM ecosystem_health ORDER BY health_score DESC LIMIT 10\n)\nORDER BY time ASC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Contributor Growth Over Time -- Top 10 Healthiest Languages",
+      "type": "timeseries"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 65 },
+      "id": 205,
+      "title": "PMI Language Co-occurrence Graph (VIZ-05 / VIZ-06)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 4
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "lang_a" },
+            "properties": [{ "id": "displayName", "value": "Language A" }, { "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "lang_b" },
+            "properties": [{ "id": "displayName", "value": "Language B" }, { "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "pmi_score" },
+            "properties": [
+              { "id": "displayName", "value": "PMI Score" },
+              { "id": "custom.width", "value": 110 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "blue",   "value": null },
+                    { "color": "green",  "value": 1.0  },
+                    { "color": "yellow", "value": 2.0  },
+                    { "color": "red",    "value": 3.0  }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "cooccurrence" },
+            "properties": [
+              { "id": "displayName", "value": "Co-occurrences" },
+              { "id": "custom.width", "value": 120 }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 12, "w": 10, "x": 0, "y": 66 },
+      "id": 50,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "PMI Score" }]
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT lang_a, lang_b, pmi_score, cooccurrence FROM pmi_pairs ORDER BY pmi_score DESC LIMIT 25;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Language Pairs by PMI Score",
+      "type": "table"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-batch" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-BlPu" },
+          "custom": {
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineWidth": 0
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 6, "x": 10, "y": 66 },
+      "id": 51,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "text": {},
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-batch" },
+          "format": "table",
+          "rawSql": "SELECT language AS metric, actor_count AS value FROM language_nodes ORDER BY actor_count DESC LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Language Node Size (Actor Count)",
+      "type": "bargauge"
+    },
+
+    {
+      "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+      "gridPos": { "h": 12, "w": 8, "x": 16, "y": 66 },
+      "id": 52,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px;\">\n  <div style=\"font-size:14px;color:#8b949e;text-align:center;padding:0 16px;\">\n    Interactive PMI force-directed graph is served by the Python HTTP server.<br/><br/>\n    Navigate to:\n  </div>\n  <div style=\"background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 14px;font-family:monospace;font-size:12px;color:#3fb950;\">\n    http://localhost:8888/analytics/viz06_pmi_graph.html\n  </div>\n  <div style=\"font-size:11px;color:#8b949e;text-align:center;padding:0 16px;\">\n    Run: <code style=\"background:#161b22;padding:2px 6px;border-radius:4px;\">python -m http.server 8888</code>\n    from the repo root inside the container.\n  </div>\n</div>",
+        "mode": "html"
+      },
+      "pluginVersion": "10.2.0",
+      "title": "PMI Graph (VIZ-06)",
+      "type": "text"
+    }
+
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "tags": ["github", "batch", "analytics", "spark", "postgres"],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "GitHub Batch -- Analytics Dashboard",
+  "uid": "github-batch-analytics",
+  "version": 1,
+  "weekStart": ""
+}

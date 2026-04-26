@@ -17,6 +17,7 @@ datasources:
   # Used by: VIZ-03 live leaderboard, VIZ-03 trending repos panel
   # ---------------------------------------------------------------------------
   - name: InfluxDB-Stream
+    uid: influxdb-stream
     type: influxdb
     access: proxy
     url: http://influxdb:8086
@@ -36,6 +37,7 @@ datasources:
   # Used by: geo heatmap, PMI graph, Health Score, language velocity panels
   # ---------------------------------------------------------------------------
   - name: PostgreSQL-Batch
+    uid: postgres-batch
     type: postgres
     access: proxy
     url: postgres-analytics:5432
