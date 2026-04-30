@@ -68,7 +68,9 @@ INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET",  "github-stream")
 # Model path from Tanusha's ML-06
 MODEL_PATH      = os.getenv(
     "MODEL_PATH",
-    "hdfs://namenode:9000/github/ml/model/rf_trained/"
+    "hdfs://namenode:9000/github/ml/model/latest/"
+    # INFRA-07 copies rf_trained → /latest/ after each weekly retraining.
+    # Loading from /latest/ ensures STREAM-06 always picks up the newest model.
 )
 
 SCORING_INTERVAL_SEC = 30 * 60   # run scoring every 30 minutes
