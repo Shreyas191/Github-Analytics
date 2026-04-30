@@ -90,6 +90,13 @@ def main():
     print(f"  True positives (TP)  : {true_positives:,}  ← model correct viral calls")
     print(f"  False positives (FP) : {false_positives:,}")
 
+    if total_preds == 0:
+        print("\n  NOTE: holdout set is empty — no 2025 data ingested yet.")
+        print("  Case studies require at least 90 days of event data to compute lead times.")
+        print("  Re-run after ingesting 2025 archive data via INFRA-06.")
+        spark.stop()
+        exit(0)
+
     # ─────────────────────────────────────────────────────────────
     # STEP 2: Load raw events to compute T_viral per repo
     # T_viral = first timestamp where cumulative WatchEvents >= 1000
@@ -132,10 +139,12 @@ def main():
     # ─────────────────────────────────────────────────────────────
     print("\n[Step 3] Computing prediction lead time per repo...")
 
-    # True positives only
+    # True positives only — stars_90d comes from labels, not features table
     tp = predictions.filter(
         (F.col("label") == 1) & (F.col("prediction") == 1.0)
-    ).select("repo_id", "repo_name", "t0", "stars_90d")
+    ).select("repo_id", "repo_name", "t0",
+             F.col("stars_90d") if "stars_90d" in predictions.columns
+             else F.lit(0).alias("stars_90d"))
 
     tp_with_viral = tp.join(t_viral, on="repo_id", how="inner")
 

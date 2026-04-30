@@ -22,6 +22,8 @@ Dependencies:
     pip install kafka-python-ng influxdb-client
 """
 
+from __future__ import annotations
+
 import os
 import time
 import logging

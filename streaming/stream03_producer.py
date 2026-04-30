@@ -16,6 +16,8 @@ Key design decisions:
     overlapping API pages (GitHub /events returns the last ~300 events).
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os

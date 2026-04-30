@@ -51,6 +51,8 @@ Usage:
     /opt/spark-apps/analytics/viz04_geo_heatmap.py
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import logging

@@ -7,6 +7,8 @@ Each PAT gives 5,000 req/hr authenticated vs 60/hr unauthenticated.
 With 4 PATs rotating: 20,000 req/hr total capacity.
 """
 
+from __future__ import annotations
+
 import time
 import logging
 from dataclasses import dataclass, field
