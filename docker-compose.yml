@@ -222,7 +222,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     healthcheck:
-      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 | grep -q 'Zookeeper version'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -312,7 +312,8 @@ services:
       - -c
       - "airflow db migrate && airflow users create --username admin --password admin --firstname Hariharan --lastname L --role Admin --email hl5865@nyu.edu 2>/dev/null || true; airflow webserver"
     depends_on:
-      - airflow-db
+      airflow-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -341,7 +342,10 @@ services:
       - ./batch/logs:/opt/airflow/logs
     command: scheduler
     depends_on:
-      - airflow-db
+      airflow-db:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_healthy
 
   # =========================================================================
   # GRAFANA DATA STORES — VIZ-01 (Vikram Markali, vrm9190)
@@ -381,7 +385,7 @@ services:
       DOCKER_INFLUXDB_INIT_BUCKET: github-stream
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: github-analytics-token
     healthcheck:
-      test: ["CMD", "influx", "ping"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/ping || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -436,7 +440,6 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/home.json
     depends_on:
       influxdb:
         condition: service_healthy
