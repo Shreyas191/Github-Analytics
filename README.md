@@ -110,7 +110,9 @@ analytics/
 
 ## Detailed Setup
 
-Each subdirectory ships its own README with deeper component-level instructions:
+See [IMPLEMENTATION.md](IMPLEMENTATION.md) for the full step-by-step end-to-end run (HDFS bootstrap, Kafka topic creation, sample data download, batch + streaming submission, troubleshooting).
+
+Per-subdirectory READMEs go deeper on each owner's component:
 [`batch/`](batch/README.md), [`streaming/`](streaming/README.md), [`ml/`](ml/README.md), [`analytics/`](analytics/README.md).
 
 ## Branch Convention

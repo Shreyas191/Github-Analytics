@@ -1,6 +1,3 @@
-# Internal docs — not for repo
-IMPLEMENTATION.md
-
 # Environment & secrets — NEVER commit these
 .env
 *.env
