@@ -110,7 +110,8 @@ analytics/
 
 ## Detailed Setup
 
-See [IMPLEMENTATION.md](IMPLEMENTATION.md) for step-by-step instructions including HDFS directory creation, sample data download, and running each pipeline component.
+Each subdirectory ships its own README with deeper component-level instructions:
+[`batch/`](batch/README.md), [`streaming/`](streaming/README.md), [`ml/`](ml/README.md), [`analytics/`](analytics/README.md).
 
 ## Branch Convention
 

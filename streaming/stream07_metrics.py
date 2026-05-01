@@ -117,7 +117,7 @@ def get_consumer_lag(bootstrap: str, group_id: str, topics: list[str]) -> dict[s
         else:
             # No committed offset = consumer hasn't read this partition yet
             lag = end_offset
-        lag_per_topic[tp] = lag_per_topic.get(tp.topic, 0) + lag
+        lag_per_topic[tp.topic] = lag_per_topic.get(tp.topic, 0) + lag
 
     return lag_per_topic
 
@@ -177,7 +177,7 @@ def read_producer_stats() -> tuple[int, int]:
 
     Returns: (events_received, events_published)
     """
-    stats_file = "/tmp/stream03_stats.json"
+    stats_file = os.getenv("PRODUCER_STATS_PATH", "/tmp/stream03_stats.json")
     try:
         import json
         with open(stats_file) as f:
