@@ -206,7 +206,6 @@ with DAG(
     check_new = PythonOperator(
         task_id="check_new_files",
         python_callable=check_new_files,
-        provide_context=True,
     )
 
     # ------------------------------------------------------------------
@@ -215,7 +214,6 @@ with DAG(
     download = PythonOperator(
         task_id="download_new_files",
         python_callable=download_new_files,
-        provide_context=True,
     )
 
     # ------------------------------------------------------------------
@@ -224,7 +222,6 @@ with DAG(
     upload = PythonOperator(
         task_id="upload_to_hdfs",
         python_callable=upload_to_hdfs,
-        provide_context=True,
     )
 
     # ------------------------------------------------------------------

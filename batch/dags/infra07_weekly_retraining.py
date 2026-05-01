@@ -168,7 +168,6 @@ with DAG(
     verify = PythonOperator(
         task_id="verify_model",
         python_callable=verify_model,
-        provide_context=True,
     )
 
     # ------------------------------------------------------------------
@@ -177,7 +176,6 @@ with DAG(
     notify = PythonOperator(
         task_id="notify_stream",
         python_callable=notify_stream,
-        provide_context=True,
     )
 
     # ------------------------------------------------------------------

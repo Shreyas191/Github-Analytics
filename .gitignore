@@ -1,10 +1,8 @@
-# Internal docs — not for repo
-IMPLEMENTATION.md
-
 # Environment & secrets — NEVER commit these
 .env
 *.env
 .env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -31,6 +29,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+!batch/logs/.gitkeep
 
 # Spark
 derby.log

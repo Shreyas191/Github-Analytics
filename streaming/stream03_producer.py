@@ -16,6 +16,8 @@ Key design decisions:
     overlapping API pages (GitHub /events returns the last ~300 events).
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -308,7 +310,8 @@ class GitHubEventsProducer:
         # Write stats to file so stream07_metrics.py can read them
         import json
         try:
-            with open("/tmp/stream03_stats.json", "w") as f:
+            stats_path = os.getenv("PRODUCER_STATS_PATH", "/tmp/stream03_stats.json")
+            with open(stats_path, "w") as f:
                 json.dump({
                     "events_received":  self.stats["events_received"],
                     "events_published": self.stats["events_published"],

@@ -21,6 +21,8 @@ Output:
     HDFS:   /github/events/raw/YYYY-MM-DD-HH.json.gz
 """
 
+from __future__ import annotations
+
 import argparse
 import logging
 import subprocess

@@ -4,3 +4,4 @@
 
 kafka-python==2.0.2
 requests==2.31.0
+influxdb-client==1.38.0

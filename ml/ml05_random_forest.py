@@ -146,11 +146,18 @@ def main():
     print("  Training complete!")
 
     #  ------------------------------------------------------------------------------------------------
-    # STEP 5: Run predictions on 2025 holdout
+    # STEP 5: Run predictions on 2025 holdout (fall back to train if holdout is empty)
     #  ------------------------------------------------------------------------------------------------
-    print("\n[Step 5] Running predictions on 2025 holdout...")
+    print("\n[Step 5] Running predictions on holdout set...")
 
-    predictions = model.transform(holdout)
+    if holdout_count == 0:
+        print("  WARNING: holdout set is empty (no 2025 data). Evaluating on training set instead.")
+        print("  This is expected when running on a sample dataset before 2025 data is ingested.")
+        eval_set = train
+    else:
+        eval_set = holdout
+
+    predictions = model.transform(eval_set)
     predictions.cache()
 
     #  ------------------------------------------------------------------------------------------------

@@ -205,10 +205,10 @@ def main():
             "f4_issues_48h", "f8_pushes_48h", "f7_lang_rank",
             "f5_owner_star_med", "f6_readme_bytes"
         ])
-        features = features.withColumn("f5_owner_star_med",
-              F.when(F.col("f5_owner_star_med") == -1.0, 0.0).otherwise(F.col("f5_owner_star_med")))
-        features = features.withColumn("f6_readme_bytes",
-              F.when(F.col("f6_readme_bytes") == -1, 0).otherwise(F.col("f6_readme_bytes")))
+    features = features.withColumn("f5_owner_star_med",
+          F.when(F.col("f5_owner_star_med") == -1.0, 0.0).otherwise(F.col("f5_owner_star_med")))
+    features = features.withColumn("f6_readme_bytes",
+          F.when(F.col("f6_readme_bytes") == -1, 0).otherwise(F.col("f6_readme_bytes")))
 
     #  ------------------------------------------------------------------------------------------------
     # STEP 10: Sanity checks
