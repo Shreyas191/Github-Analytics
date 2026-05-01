@@ -206,11 +206,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> sum(column: \"_value\")",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> sum(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "Stars (last 30 min)",
+      "title": "Stars",
       "type": "stat"
     },
     {
@@ -274,11 +274,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> sum(column: \"_value\")",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> sum(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "New Repos (last 30 min)",
+      "title": "New Repos",
       "type": "stat"
     },
     {
@@ -417,7 +417,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.labels.repo_name}"
         },
         "overrides": []
       },
@@ -501,7 +502,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.labels.repo_name}"
         },
         "overrides": [
           {
@@ -568,11 +570,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {_value: \"Stars\"})\n  |> sort(columns: [\"Stars\"], desc: true)\n  |> limit(n: 15)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {_value: \"Stars\"})\n  |> sort(columns: [\"Stars\"], desc: true)\n  |> limit(n: 15)",
           "refId": "A"
         }
       ],
-      "title": "Trending Repos -- Stars Last 30 Min",
+      "title": "Trending Repos -- Top by Stars",
       "transformations": [
         {
           "id": "organize",
@@ -653,7 +655,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.labels.language}"
         },
         "overrides": []
       },
@@ -724,7 +727,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.labels.language}"
         },
         "overrides": []
       },
@@ -759,11 +763,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 15)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 15)",
           "refId": "A"
         }
       ],
-      "title": "Language Leaderboard -- Repos Created (Last 30 Min)",
+      "title": "Language Leaderboard -- Repos Created",
       "type": "bargauge"
     },
     {
@@ -822,7 +826,8 @@
             ]
           },
           "unit": "short",
-          "decimals": 0
+          "decimals": 0,
+          "displayName": "${__field.labels.topic}"
         },
         "overrides": [
           {
@@ -964,7 +969,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.labels.topic}"
         },
         "overrides": []
       },
@@ -1071,7 +1077,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "displayName": "${__field.name}"
         },
         "overrides": []
       },
