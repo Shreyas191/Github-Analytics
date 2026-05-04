@@ -14,7 +14,7 @@ VIZ-01 through VIZ-09.
 | VIZ-06 | PMI force-directed graph | 4 | Done |
 | VIZ-07 | Ecosystem Health Score | 3-4 | Done |
 | VIZ-08 | Language velocity rankings report | 4 | Done |
-| VIZ-09 | Final report + all deliverables | 5 | Pending |
+| VIZ-09 | Final report + all deliverables | 5 | Done |
 
 ---
 
@@ -371,18 +371,57 @@ docker exec spark-master spark-submit \
 
 ---
 
+## VIZ-09: Final Report
+
+Consolidates all analytical findings from VIZ-04 through VIZ-08 and ML-07 into
+a single formatted console report. Reads from all PostgreSQL tables and the ML-07
+case studies Parquet in HDFS. Use this to generate the Section 5 / final summary
+block for course submission.
+
+Outputs:
+- Geographic shift summary (top countries, year-over-year growth)
+- Language ecosystem overview (top PMI pairs, most connected languages)
+- Ecosystem health rankings (top and bottom languages by composite score)
+- Language velocity: top rising and declining languages with inflection point annotations
+- Viral repo case studies (loaded from ML-07 HDFS output)
+- Key takeaways block
+
+Prerequisites: VIZ-04, VIZ-05, VIZ-07, VIZ-08, and ML-07 must have all completed.
+
+```bash
+# Standard run:
+docker exec spark-master spark-submit \
+  --master spark://spark-master:7077 \
+  --packages org.postgresql:postgresql:42.6.0 \
+  --conf spark.jars.ivy=/tmp/.ivy \
+  /opt/spark-apps/analytics/viz09_final_report.py
+
+# Brief mode (5 rows per table instead of 10):
+docker exec spark-master spark-submit \
+  --master spark://spark-master:7077 \
+  --packages org.postgresql:postgresql:42.6.0 \
+  --conf spark.jars.ivy=/tmp/.ivy \
+  /opt/spark-apps/analytics/viz09_final_report.py --brief
+```
+
+The script degrades gracefully -- if any upstream table is missing it prints a
+warning and skips that section rather than crashing.
+
+---
+
 ## Recommended Run Order
 
 Run these in sequence after the schema setup:
 
 ```
-1. db_schema.sql          -- create all postgres tables (one time)
-2. viz04_geo_heatmap.py   -- needs PATs, long-running (checkpoint resumes)
+1. db_schema.sql             -- create all postgres tables (one time)
+2. viz04_geo_heatmap.py      -- needs PATs, long-running (checkpoint resumes)
 3. viz05_pmi_cooccurrence.py -- outputs pmi_graph.json for VIZ-06
 4. viz07_health_score.py
 5. viz08_language_velocity.py
 6. Open viz06_pmi_graph.html after viz05 finishes
 7. Grafana dashboards load automatically once tables have data
+8. viz09_final_report.py     -- run after all above + ML-07 have completed
 ```
 
 ---
@@ -398,6 +437,7 @@ analytics/
   viz06_pmi_graph.html            -- VIZ-06: D3.js force-directed PMI graph
   viz07_health_score.py           -- VIZ-07: ecosystem health score (0-100)
   viz08_language_velocity.py      -- VIZ-08: language velocity rankings
+  viz09_final_report.py           -- VIZ-09: consolidated final report (all sections)
   grafana/
     provisioning/
       datasources/
