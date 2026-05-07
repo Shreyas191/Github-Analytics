@@ -13,26 +13,83 @@ Big Data Systems Project · NYU · 5 Weeks · 4 Members
 
 ## Architecture
 
-Lambda architecture with batch + streaming paths feeding a Grafana dashboard.
+Lambda architecture: batch path for accuracy + history, streaming path for latency.
+Both paths feed a unified Grafana dashboard layer (one live, one batch).
 
 ```
-GitHub Archive (GCS, 2023–2025, ~120GB)
-  └── infra02_download.py (gsutil)
-        └── HDFS /github/events/raw/
-              └── infra04_batch_parser.py (PySpark)
-                    └── HDFS /github/events/parquet/   ← partitioned Parquet
-                          ├── ML-01 label construction
-                          ├── ML-03 feature engineering
-                          ├── ML-04 train/test split
-                          └── ML-05 Random Forest → /models/viral_rf/latest/
+BATCH PATH ──────────────────────────────────────────────────────────────────────────
+  GitHub Archive (GCS, 2023–2025, ~120GB)
+    └── infra02_download.py (gsutil)                                  [INFRA-02]
+          └── HDFS /github/events/raw/
+                └── infra04_batch_parser.py (PySpark)                  [INFRA-04]
+                      └── HDFS /github/events/parquet/                  ← partitioned Parquet
+                            │           (year / month / event_type)
+                            │
+                            ├── ML pipeline ─────────────────────────────────────────
+                            │     ML-01 label construction
+                            │     ML-02 weightCol class imbalance
+                            │     ML-03 feature engineering (8 features, T+48h)
+                            │     ML-04 train/test split (2023-24 / 2025 holdout)
+                            │     ML-05 Random Forest (200 trees, weightCol)
+                            │     ML-06 PipelineModel.save → /models/viral_rf/latest/
+                            │     ML-07 case studies
+                            │
+                            ├── Analytics ──────────────────────────────────────────
+                            │     VIZ-02 enrichment (REST API: F5 owner stars, F6 README bytes)
+                            │     VIZ-04 geographic heatmap (geo_contributions)
+                            │     VIZ-05 PMI co-occurrence  (pmi_pairs, language_nodes)
+                            │     VIZ-07 ecosystem health   (ecosystem_health)
+                            │     VIZ-08 language velocity  (language_velocity, language_rankings)
+                            │           └── postgres-analytics
+                            │                 └── Grafana batch dashboard
+                            │
+                            └── INFRA-05 validation report (row counts, null rates, partition sizes)
 
-GitHub Events API (live)
-  └── stream03_producer.py (every 15s, 4 PATs rotating)
-        └── Kafka topics (push, watch, fork, pr, issues, create, pending-repos)
-              └── PySpark Structured Streaming (STREAM-05)
-                    └── InfluxDB → Grafana dashboards
-                          └── STREAM-06 scoring queue (loads ML-05 model)
+  Orchestration:
+    INFRA-06 Airflow DAG @daily   — incremental hourly ingestion
+    INFRA-07 Airflow DAG @weekly  — model retraining → /models/viral_rf/latest/
+
+STREAMING PATH ──────────────────────────────────────────────────────────────────────
+  GitHub Events API (live)
+    └── stream01_pat_rotator.py        (round-robin across 4 PATs, 5k req/hr each)
+          │
+          └── stream03_producer.py     (poll /events every 15s, ETag conditional)   [STREAM-03]
+                └── Kafka topics:                                        [STREAM-02]
+                    push-events · watch-events · fork-events ·
+                    pr-events  · issue-events · create-events · pending-repos
+                      │
+                      ├── stream05_spark_streaming.py                     [STREAM-05]
+                      │     ├── 5-min tumbling windows, 10-min watermark
+                      │     ├── star_velocity      (WatchEvent → InfluxDB)
+                      │     └── language_momentum  (CreateEvent → InfluxDB)
+                      │           └── Grafana live dashboard
+                      │
+                      ├── stream06_scoring_job.py                          [STREAM-06]
+                      │     loads /models/viral_rf/latest/ from HDFS
+                      │     scores repos at first_seen + 48h
+                      │     → InfluxDB → Grafana live dashboard
+                      │
+                      └── stream07_metrics.py                              [STREAM-07]
+                            consumer_lag (per topic) + pipeline_throughput (events/min)
+                              → InfluxDB → Grafana live dashboard
+                              (also reads producer stats via shared /share/stream03_stats.json)
+
+  Schema parity test:
+    stream04_schema_test.py — assert streaming-parser output ≡ INFRA-04 batch Parquet schema
+
+VISUALIZATION LAYER ─────────────────────────────────────────────────────────────────
+  Grafana 10.2
+    ├── github_live.json   ← InfluxDB datasource    (star velocity, language momentum,
+    │                                                consumer lag, pipeline throughput)
+    ├── github_batch.json  ← PostgreSQL datasource  (health score, geo heatmap,
+    │                                                language velocity, PMI counts)
+    └── viz06_pmi_graph.html  ← standalone D3.js force-directed PMI graph
 ```
+
+The batch and streaming paths converge at three points:
+1. **Schema** — `batch/schema.py` (INFRA-03) is the single source of truth, asserted by STREAM-04.
+2. **Model** — INFRA-07 republishes the RF to HDFS, STREAM-06 picks it up.
+3. **Dashboards** — Grafana queries both InfluxDB (streaming) and Postgres (batch).
 
 ## Stack
 
