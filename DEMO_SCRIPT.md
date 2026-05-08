@@ -163,8 +163,9 @@ Show two DAGs:
 
 Three points:
 1. **All 26 tickets shipped.** 25 code deliverables in repo + VIZ-09 final analytical report.
-2. **Honest scope:** 2-hour GHArchive sample + hybrid language enrichment in the demo. Full proposal scope (2023–2025, 120 GB, overnight enrichment) runs unchanged on Dataproc.
-3. **What we'd do next:** language enrichment moved into INFRA-04 itself (extract language from PushEvent and PullRequestEvent payloads — no extra REST calls); switch Spark Streaming to cluster mode + supervised; add CI on the existing 261 pytest cases.
+2. **Real, end-to-end ML pipeline:** trained on 7 days of January 2024 GHArchive (12 GB raw, 26.7M events, 894 MB Parquet). Sampled 1500 most-active repos, REST-API-labeled ground truth (29 viral / 1134 = 2.56% — matches Octoverse base rate), all 8 features within T+48h, RF with weightCol class imbalance. Model loaded by STREAM-06 scoring queue.
+3. **Honest scope on the batch dashboard:** geographic data is fully real (REST API location resolution), but language-related panels (health score, PMI, language counts) use hybrid enrichment for the 2-hour demo sample. Full overnight `viz02_enrichment.py` run on Dataproc closes that gap.
+4. **What we'd do next:** language enrichment moved into INFRA-04 itself (extract language from PushEvent and PullRequestEvent payloads — no extra REST calls); switch Spark Streaming to cluster mode + supervised; add CI on the existing 261 pytest cases.
 
 ---
 
