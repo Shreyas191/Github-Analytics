@@ -1128,9 +1128,9 @@
       "type": "timeseries"
     },
     {
-      "id": 60,
-      "title": "Likely-Viral Repos (heuristic stand-in)",
-      "type": "bargauge",
+      "id": 70,
+      "title": "Live Viral Predictions (real RF model)",
+      "type": "table",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-stream"
@@ -1140,7 +1140,13 @@
           "color": {
             "mode": "thresholds"
           },
-          "displayName": "${__field.labels.repo_name}",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "gradient"
+            }
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1151,42 +1157,54 @@
               },
               {
                 "color": "green",
-                "value": 5
+                "value": 0.5
               },
               {
                 "color": "yellow",
-                "value": 10
+                "value": 0.7
               },
               {
                 "color": "orange",
-                "value": 20
+                "value": 0.85
               },
               {
                 "color": "red",
-                "value": 50
+                "value": 0.95
               }
             ]
           },
-          "unit": "short"
+          "unit": "percentunit"
         },
-        "overrides": []
-      },
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        }
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "repo_name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 340
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "_value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Viral Probability"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
+        "h": 10,
+        "w": 24,
         "x": 0,
         "y": 42
       },
@@ -1196,11 +1214,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> filter(fn: (r) => r._value >= 5)\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {_value: \"Stars in 5-min spikes\"})\n  |> sort(columns: [\"Stars in 5-min spikes\"], desc: true)\n  |> limit(n: 10)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"viral_predictions\")\n  |> filter(fn: (r) => r._field == \"probability\")\n  |> last()\n  |> group(columns: [\"repo_name\"])\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 20)",
           "refId": "A"
         }
       ],
-      "description": "Repos that gained >= 5 stars in any single 5-min Spark window. Heuristic stand-in for the trained Random Forest in ml/ml05_random_forest.py (which needs multi-year data not present in the demo's 2-hour sample). The trained-RF version writes to measurement 'viral_predictions' via STREAM-06; this panel uses early-velocity-only as a proxy for class demos."
+      "description": "Top 20 repos by viral-probability score from the trained Random Forest model (ml/ml05_random_forest.py). Trained on 1500 Jan-2024 repos sampled from a 7-day GHArchive window, labeled by current star count via REST API (threshold: 100 stars). Features: 8 per proposal spec, computed within T+48h of repo creation. PipelineModel saved at /models/viral_rf/latest/ and loaded by STREAM-06 scoring queue for live repos at the 48h mark."
     }
   ],
   "refresh": "30s",
