@@ -1126,6 +1126,81 @@
       ],
       "title": "Pipeline Throughput Over Time",
       "type": "timeseries"
+    },
+    {
+      "id": 60,
+      "title": "Likely-Viral Repos (heuristic stand-in)",
+      "type": "bargauge",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-stream"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "displayName": "${__field.labels.repo_name}",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 5
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-stream"
+          },
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> filter(fn: (r) => r._value >= 5)\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {_value: \"Stars in 5-min spikes\"})\n  |> sort(columns: [\"Stars in 5-min spikes\"], desc: true)\n  |> limit(n: 10)",
+          "refId": "A"
+        }
+      ],
+      "description": "Repos that gained >= 5 stars in any single 5-min Spark window. Heuristic stand-in for the trained Random Forest in ml/ml05_random_forest.py (which needs multi-year data not present in the demo's 2-hour sample). The trained-RF version writes to measurement 'viral_predictions' via STREAM-06; this panel uses early-velocity-only as a proxy for class demos."
     }
   ],
   "refresh": "30s",
