@@ -1223,7 +1223,7 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"viral_predictions\")\n  |> filter(fn: (r) => r._field == \"probability\")\n  |> last()\n    |> group()\n  |> rename(columns: {_value: \"Viral Probability\"})\n  |> keep(columns: [\"repo_name\", \"_value\"])\n  |> sort(columns: [\"Viral Probability\"], desc: true)\n  |> limit(n: 20)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"viral_predictions\")\n  |> filter(fn: (r) => r._field == \"probability\")\n  |> last()\n  |> group()\n  |> rename(columns: {_value: \"Viral Probability\"})\n  |> keep(columns: [\"repo_name\", \"Viral Probability\"])\n  |> sort(columns: [\"Viral Probability\"], desc: true)\n  |> limit(n: 20)",
           "refId": "A"
         }
       ],
