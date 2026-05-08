@@ -763,7 +763,7 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> group()\n  |> keep(columns: [\"language\", \"_value\"])\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 15)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> group()\n  |> rename(columns: {_value: \"New Repos\"})\n  |> keep(columns: [\"language\", \"New Repos\"])\n  |> sort(columns: [\"New Repos\"], desc: true)\n  |> limit(n: 15)",
           "refId": "A"
         }
       ],
