@@ -707,14 +707,12 @@
             "mode": "continuous-GrYlRd"
           },
           "custom": {
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "gradient"
             },
-            "lineWidth": 0
+            "inspect": false
           },
           "mappings": [],
           "min": 0,
@@ -722,15 +720,60 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "blue",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 5
+              },
+              {
+                "color": "yellow",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
               }
             ]
           },
           "unit": "short",
-          "displayName": "${__field.labels.language}"
+          "displayName": "${__field.name}"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "language"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "displayName",
+                "value": "Language"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "New Repos"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -739,23 +782,6 @@
         "y": 16
       },
       "id": 21,
-      "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
-        "namePlacement": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {},
-        "valueMode": "color"
-      },
       "pluginVersion": "10.2.0",
       "targets": [
         {
@@ -768,7 +794,7 @@
         }
       ],
       "title": "Language Leaderboard -- Repos Created",
-      "type": "bargauge"
+      "type": "table"
     },
     {
       "collapsed": false,
