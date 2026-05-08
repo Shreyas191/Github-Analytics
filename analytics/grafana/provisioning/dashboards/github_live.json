@@ -570,7 +570,7 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {_value: \"Stars\"})\n  |> sort(columns: [\"Stars\"], desc: true)\n  |> limit(n: 15)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"star_velocity\")\n  |> filter(fn: (r) => r._field == \"star_count\")\n  |> group(columns: [\"repo_name\"])\n  |> sum(column: \"_value\")\n  |> group()\n  |> rename(columns: {_value: \"Stars\"})\n  |> sort(columns: [\"Stars\"], desc: true)\n  |> limit(n: 15)",
           "refId": "A"
         }
       ],
@@ -763,7 +763,7 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 15)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"language_momentum\")\n  |> filter(fn: (r) => r._field == \"new_repo_count\")\n  |> group(columns: [\"language\"])\n  |> sum(column: \"_value\")\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 15)",
           "refId": "A"
         }
       ],
@@ -901,7 +901,7 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"consumer_lag\")\n  |> filter(fn: (r) => r._field == \"lag\")\n  |> group(columns: [\"topic\"])\n  |> last()\n  |> rename(columns: {_value: \"Lag\"})\n  |> sort(columns: [\"Lag\"], desc: true)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"consumer_lag\")\n  |> filter(fn: (r) => r._field == \"lag\")\n  |> group(columns: [\"topic\"])\n  |> last()\n  |> group()\n  |> rename(columns: {_value: \"Lag\"})\n  |> sort(columns: [\"Lag\"], desc: true)",
           "refId": "A"
         }
       ],
