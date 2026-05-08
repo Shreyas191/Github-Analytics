@@ -1223,17 +1223,11 @@
             "type": "influxdb",
             "uid": "influxdb-stream"
           },
-          "query": "from(bucket: \"github-stream\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"viral_predictions\")\n  |> filter(fn: (r) => r._field == \"probability\")\n  |> last()\n  |> keep(columns: [\"repo_name\", \"_value\"])\n  |> rename(columns: {_value: \"Viral Probability\"})\n  |> sort(columns: [\"Viral Probability\"], desc: true)\n  |> limit(n: 20)",
+          "query": "from(bucket: \"github-stream\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"viral_predictions\")\n  |> filter(fn: (r) => r._field == \"probability\")\n  |> last()\n  |> keep(columns: [\"repo_name\", \"_value\"])\n  |> group()\n  |> rename(columns: {_value: \"Viral Probability\"})\n  |> sort(columns: [\"Viral Probability\"], desc: true)\n  |> limit(n: 20)",
           "refId": "A"
         }
       ],
-      "description": "Top 20 repos by viral-probability score from the trained Random Forest model (ml/ml05_random_forest.py). Trained on 1500 Jan-2024 repos sampled from a 7-day GHArchive window, labeled by current star count via REST API (threshold: 100 stars). Features: 8 per proposal spec, computed within T+48h of repo creation. PipelineModel saved at /models/viral_rf/latest/ and loaded by STREAM-06 scoring queue for live repos at the 48h mark.",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        }
-      ]
+      "description": "Top 20 repos by viral-probability score from the trained Random Forest model (ml/ml05_random_forest.py). Trained on 1500 Jan-2024 repos sampled from a 7-day GHArchive window, labeled by current star count via REST API (threshold: 100 stars). Features: 8 per proposal spec, computed within T+48h of repo creation. PipelineModel saved at /models/viral_rf/latest/ and loaded by STREAM-06 scoring queue for live repos at the 48h mark."
     }
   ],
   "refresh": "30s",
